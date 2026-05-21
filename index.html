@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#8B0000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>时令消费推荐</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;}
+body{background:#FFF8F0;min-height:100vh;overflow-x:hidden;}
+/* Header */
+.header{background:linear-gradient(135deg,#8B0000,#C41E3A);color:#FFF8F0;padding:16px 20px 12px;text-align:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(139,0,0,0.3);}
+.header h1{font-size:22px;letter-spacing:3px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.header h1 span{color:#FFD700;}
+.header .sub{font-size:12px;opacity:0.85;margin-top:2px;}
+/* Region Toggle */
+.region-bar{display:flex;justify-content:center;gap:8px;padding:10px 16px;background:#FFF;border-bottom:1px solid #F0E0D0;}
+.region-btn{padding:6px 20px;border-radius:20px;border:1.5px solid #C41E3A;font-size:14px;cursor:pointer;background:#FFF;color:#C41E3A;transition:all 0.2s;}
+.region-btn.active{background:#C41E3A;color:#FFF8F0;}
+/* Date indicator */
+.date-indicator{text-align:center;padding:6px 0;font-size:13px;color:#8B6914;background:#FFF8F0;border-bottom:1px solid #F0E0D0;}
+.date-indicator .highlight{display:inline-block;background:#FFD700;color:#8B0000;padding:1px 10px;border-radius:10px;font-weight:600;}
+/* Season Timeline */
+.timeline-wrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:linear-gradient(180deg,#FFF8F0,#FFF0E0);border-bottom:2px solid #E8D5C0;position:sticky;top:98px;z-index:90;}
+.timeline-wrap::-webkit-scrollbar{display:none;}
+.timeline{display:flex;padding:14px 16px 10px;gap:0;min-width:max-content;position:relative;}
+.timeline::after{content:'';position:absolute;bottom:28px;left:30px;right:30px;height:3px;background:linear-gradient(90deg,#E8D5C0 0%,#C41E3A 50%,#E8D5C0 100%);border-radius:2px;}
+.season-item{flex-shrink:0;width:72px;text-align:center;cursor:pointer;position:relative;transition:all 0.3s;padding:0 2px;}
+.season-item .dot{width:12px;height:12px;border-radius:50%;background:#D4A017;margin:0 auto 6px;position:relative;z-index:2;border:2px solid #FFF8F0;transition:all 0.3s;}
+.season-item.active .dot{width:18px;height:18px;background:#C41E3A;border-color:#FFD700;box-shadow:0 0 8px rgba(196,30,58,0.5);}
+.season-item .name{font-size:12px;color:#8B6914;font-weight:500;transition:all 0.3s;}
+.season-item.active .name{color:#C41E3A;font-weight:700;font-size:13px;}
+.season-item .date-label{font-size:9px;color:#B8A090;margin-top:1px;}
+.season-item.today .dot{border-color:#FFD700;box-shadow:0 0 6px rgba(255,215,0,0.6);}
+.season-item.today::after{content:'今';position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#FFD700;color:#8B0000;border-radius:8px;padding:0 6px;font-size:9px;font-weight:700;}
+/* Navigation */
+.nav-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#FFF;border-bottom:1px solid #F0E0D0;}
+.nav-btn{width:44px;height:44px;border-radius:50%;border:1.5px solid #C41E3A;background:#FFF;color:#C41E3A;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.nav-btn:active{background:#C41E3A;color:#FFF;}
+.nav-title{font-size:17px;font-weight:700;color:#8B0000;letter-spacing:2px;}
+.nav-title .subtitle{font-size:12px;font-weight:400;color:#8B6914;display:block;text-align:center;}
+/* Quadrants */
+.quadrants{padding:14px 14px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px;margin:0 auto;}
+.q-card{border-radius:16px;padding:16px;min-height:130px;transition:all 0.4s;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+.q-card::before{content:'';position:absolute;top:-20px;right:-20px;width:60px;height:60px;border-radius:50%;opacity:0.12;}
+.q-card .q-icon{font-size:26px;display:block;margin-bottom:6px;}
+.q-card .q-title{font-size:15px;font-weight:700;margin-bottom:6px;letter-spacing:1px;}
+.q-card .q-items{display:flex;flex-wrap:wrap;gap:6px;}
+.q-card .q-tag{font-size:12px;padding:4px 10px;border-radius:14px;background:rgba(255,255,255,0.7);color:#333;}
+.q-yi{background:linear-gradient(135deg,#FFF0E0,#FFE0C0);border:1.5px solid #E8A060;}
+.q-yi .q-title{color:#C07030;}
+.q-shi{background:linear-gradient(135deg,#FFF5E0,#FFE8BB);border:1.5px solid #D4A017;}
+.q-shi .q-title{color:#8B6914;}
+.q-zhu{background:linear-gradient(135deg,#E8F0E8,#D0E8C8);border:1.5px solid #6B9E50;}
+.q-zhu .q-title{color:#4A7A30;}
+.q-xing{background:linear-gradient(135deg,#E8EEFF,#C8D8F8);border:1.5px solid #6080C0;}
+.q-xing .q-title{color:#4060A0;}
+/* Loading & Empty */
+.placeholder{text-align:center;padding:40px 20px;color:#B8A090;font-size:14px;}
+/* Footer */
+.footer{text-align:center;padding:14px;font-size:11px;color:#B8A090;border-top:1px solid #F0E0D0;}
+/* Animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.q-card{animation:fadeIn 0.4s ease-out;}
+.season-item{transition:transform 0.2s;}
+.season-item:active{transform:scale(0.92);}
+/* Responsive */
+@media(min-width:600px){
+  .quadrants{gap:16px;}
+  .q-card{padding:20px;}
+  .header h1{font-size:26px;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧧 <span>时令</span>消费推荐</h1>
+  <div class="sub">衣 · 食 · 住 · 行 · 四时相宜</div>
+</div>
+
+<div class="region-bar">
+  <button class="region-btn" data-region="north">🏔️ 北方</button>
+  <button class="region-btn active" data-region="south">🌴 南方</button>
+</div>
+
+<div class="date-indicator" id="dateIndicator">加载中...</div>
+
+<div class="timeline-wrap" id="timelineWrap">
+  <div class="timeline" id="timeline"></div>
+</div>
+
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn">‹</button>
+  <div class="nav-title" id="navTitle">
+    加载中...
+    <span class="subtitle" id="navSub"></span>
+  </div>
+  <button class="nav-btn" id="nextBtn">›</button>
+</div>
+
+<div class="quadrants" id="quadrants"></div>
+
+<div class="footer">🧧 时令消费推荐 · POC v1.0</div>
+
+<script>
+// ============ DATA ============
+const DATA = {
+  south: [
+    {
+      id:'chunjie-qianxi', name:'春节前夕', icon:'🧨', date:'1月中-2月初',
+      yi:['红色系拜年服','新内衣裤','保暖内衣'],
+      shi:['预制菜礼盒','干果礼盒','高端酒水'],
+      zhu:['扫除工具','对联装饰','智能门锁'],
+      xing:['返乡机票','租车服务','洗车券']
+    },
+    {
+      id:'chunjie', name:'春节', icon:'🏮', date:'2月初',
+      yi:['汉服/马面裙','拜年外套','红围巾'],
+      shi:['年糕礼盒','八宝饭','汤圆'],
+      zhu:['年花盆栽','红灯笼','香薰蜡烛'],
+      xing:['周边短途游','温泉酒店','电影票']
+    },
+    {
+      id:'yuanxiao', name:'元宵', icon:'🏮', date:'2月中',
+      yi:['春装外套','灯笼配饰','丝巾'],
+      shi:['汤圆礼盒','糖葫芦','传统糕点'],
+      zhu:['花灯装饰','中式桌布','茶具'],
+      xing:['赏灯夜游','庙会','亲子活动']
+    },
+    {
+      id:'qingming', name:'清明/春季', icon:'🌿', date:'4月初',
+      yi:['冲锋衣','徒步鞋','防晒服'],
+      shi:['艾草青团','春茶','应季春笋'],
+      zhu:['除湿机','露营装备','香薰'],
+      xing:['赏花线路','自驾游','户外电源']
+    },
+    {
+      id:'duanwu', name:'端午', icon:'🐉', date:'6月初',
+      yi:['凉感面料衫','凉鞋','中式盘扣衫'],
+      shi:['粽子礼盒','咸鸭蛋','雄黄酒'],
+      zhu:['艾草挂饰','竹编收纳','驱蚊器'],
+      xing:['龙舟赛','古镇游','漂流']
+    },
+    {
+      id:'sanfu', name:'三伏/夏季', icon:'☀️', date:'7-8月',
+      yi:['凉感T恤','泳衣','防晒帽'],
+      shi:['消暑饮品','凉茶','控糖冰淇淋'],
+      zhu:['空调清洗','凉席','制冰机'],
+      xing:['避暑酒店','水上乐园','车载冰箱']
+    },
+    {
+      id:'qixi', name:'七夕', icon:'💕', date:'8月中',
+      yi:['情侣装','精致饰品','香水'],
+      shi:['巧克力','浪漫晚餐','红酒'],
+      zhu:['香薰蜡烛','氛围灯','花束'],
+      xing:['情侣SPA','星空露营地','城市夜景']
+    },
+    {
+      id:'zhongqiu', name:'中秋', icon:'🌙', date:'9月中',
+      yi:['旗袍/国风','秋装外套','丝巾'],
+      shi:['月饼礼盒','大闸蟹','桂花酒'],
+      zhu:['月球灯','团圆餐桌','茶具套装'],
+      xing:['赏月游船','短途旅行','家庭聚餐']
+    },
+    {
+      id:'kaixue', name:'开学/入秋', icon:'📚', date:'9月初',
+      yi:['学院风服饰','运动鞋','卫衣'],
+      shi:['润肺梨膏','养生炖品','秋梨'],
+      zhu:['护眼台灯','人体工学椅','加湿器'],
+      xing:['短途秋游','旅行拉杆箱','周末出行']
+    },
+    {
+      id:'chongyang', name:'重阳', icon:'🌺', date:'10月中',
+      yi:['保暖马甲','健步鞋','羊绒围巾'],
+      shi:['重阳糕','养生茶','滋补汤包'],
+      zhu:['按摩椅','足浴盆','血压计'],
+      xing:['登高','赏菊','温泉养生']
+    },
+    {
+      id:'shuang11', name:'双十一', icon:'🛍️', date:'11月',
+      yi:['羽绒服','大衣','靴子'],
+      shi:['零食大礼包','速食囤货','咖啡豆'],
+      zhu:['扫地机器人','空气炸锅','取暖器'],
+      xing:['滑雪季预售','温泉券','年假旅行']
+    },
+    {
+      id:'dongzhi', name:'冬至/深冬', icon:'❄️', date:'12月',
+      yi:['羽绒服','加厚打底','围巾手套'],
+      shi:['羊肉汤锅','饺子','火锅底料'],
+      zhu:['电暖器','加绒四件套','加湿器'],
+      xing:['滑雪场','温泉','冰雪大世界']
+    }
+  ],
+  north: [
+    {
+      id:'chunjie-qianxi', name:'春节前夕', icon:'🧨', date:'1月中-2月初',
+      yi:['羽绒拜年服','厚保暖内衣','羊绒衫'],
+      shi:['预制菜礼盒','干果礼盒','高端白酒'],
+      zhu:['扫除工具','对联装饰','智能门锁'],
+      xing:['返乡机票','租车','洗车券']
+    },
+    {
+      id:'chunjie', name:'春节', icon:'🏮', date:'2月初',
+      yi:['貂绒外套','厚羽绒服','红围巾'],
+      shi:['饺子礼盒','年糕','八大碗'],
+      zhu:['年花盆栽','红灯笼','地暖垫'],
+      xing:['滑雪','庙会','室内温泉']
+    },
+    {
+      id:'yuanxiao', name:'元宵', icon:'🏮', date:'2月中',
+      yi:['厚春装','毛线帽','围巾'],
+      shi:['元宵礼盒','糖葫芦','传统糕点'],
+      zhu:['花灯装饰','中式桌布','茶具'],
+      xing:['赏灯夜游','冰雪节','庙会']
+    },
+    {
+      id:'qingming', name:'清明/春季', icon:'🌿', date:'4月初',
+      yi:['防风夹克','徒步鞋','薄羽绒'],
+      shi:['艾草青团','春茶','榆钱饭'],
+      zhu:['加湿器','露营装备','空气净化器'],
+      xing:['赏花线路','放风筝','户外烧烤']
+    },
+    {
+      id:'duanwu', name:'端午', icon:'🐉', date:'6月初',
+      yi:['薄外套','透气T恤','凉鞋'],
+      shi:['粽子礼盒','咸鸭蛋','凉茶'],
+      zhu:['艾草挂饰','竹编收纳','驱蚊器'],
+      xing:['草原游','漂流','避暑山庄']
+    },
+    {
+      id:'sanfu', name:'三伏/夏季', icon:'☀️', date:'7-8月',
+      yi:['凉感T恤','泳衣','防晒冰袖'],
+      shi:['消暑饮品','凉茶','控糖冰淇淋'],
+      zhu:['空调清洗','凉席','制冰机'],
+      xing:['北戴河避暑','水上乐园','露营']
+    },
+    {
+      id:'qixi', name:'七夕', icon:'💕', date:'8月中',
+      yi:['情侣装','精致饰品','香水'],
+      shi:['巧克力','浪漫晚餐','红酒'],
+      zhu:['香薰蜡烛','氛围灯','花束'],
+      xing:['情侣SPA','星空露营地','城市夜景']
+    },
+    {
+      id:'zhongqiu', name:'中秋', icon:'🌙', date:'9月中',
+      yi:['旗袍/国风','秋装外套','丝巾'],
+      shi:['月饼礼盒','大闸蟹','桂花酒'],
+      zhu:['月球灯','团圆餐桌','茶具套装'],
+      xing:['赏月游船','短途旅行','家庭聚餐']
+    },
+    {
+      id:'kaixue', name:'开学/入秋', icon:'📚', date:'9月初',
+      yi:['学院风服饰','运动鞋','卫衣'],
+      shi:['润肺梨膏','养生炖品','秋梨'],
+      zhu:['护眼台灯','人体工学椅','加湿器'],
+      xing:['短途秋游','旅行拉杆箱','周末出行']
+    },
+    {
+      id:'chongyang', name:'重阳', icon:'🌺', date:'10月中',
+      yi:['保暖马甲','健步鞋','羊绒围巾'],
+      shi:['重阳糕','养生茶','滋补汤包'],
+      zhu:['按摩椅','足浴盆','血压计'],
+      xing:['登高','赏菊','温泉养生']
+    },
+    {
+      id:'shuang11', name:'双十一', icon:'🛍️', date:'11月',
+      yi:['长款羽绒','大衣','雪地靴'],
+      shi:['零食大礼包','速食囤货','咖啡豆'],
+      zhu:['扫地机器人','空气炸锅','取暖器'],
+      xing:['滑雪季预售','温泉券','年假旅行']
+    },
+    {
+      id:'dongzhi', name:'冬至/深冬', icon:'❄️', date:'12月',
+      yi:['加厚羽绒','羊绒大衣','皮毛一体靴'],
+      shi:['羊肉汤锅','酸菜白肉','火锅底料'],
+      zhu:['电暖器','加绒四件套','地暖垫'],
+      xing:['滑雪场','冰雪大世界','冰川徒步']
+    }
+  ]
+};
+
+// ============ STATE ============
+let currentRegion = 'south';
+let currentIndex = 0;
+
+function getData(){return DATA[currentRegion];}
+function getSeason(i){return getData()[i];}
+
+// ============ SOLAR TERM DETERMINATION ============
+function getCurrentSeasonIndex(){
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const md = m * 100 + d;
+  // Approximate date ranges for each season
+  const ranges = [
+    {min:107, max:205, idx:0},  // 春节前夕 1/7-2/5
+    {min:206, max:215, idx:1},  // 春节 2/6-2/15
+    {min:216, max:228, idx:2},  // 元宵 2/16-2/28
+    {min:301, max:415, idx:3},  // 清明/春季 3/1-4/15
+    {min:416, max:531, idx:4},  // 端午 4/16-5/31
+    {min:601, max:731, idx:5},  // 三伏/夏季 6/1-7/31
+    {min:801, max:820, idx:6},  // 七夕 8/1-8/20
+    {min:821, max:915, idx:7},  // 中秋 8/21-9/15
+    {min:901, max:915, idx:8},  // 开学 9/1-9/15
+    {min:916, max:1031, idx:9}, // 重阳 9/16-10/31
+    {min:1101, max:1130, idx:10}, // 双十一 11/1-11/30
+    {min:1201, max:1231, idx:11}  // 冬至 12/1-12/31
+  ];
+  // Handle year-wrap (春节前夕 in Jan)
+  for(const r of ranges){
+    if(md >= r.min && md <= r.max) return r.idx;
+  }
+  return 0; // default
+}
+
+// ============ RENDER ============
+function renderTimeline(){
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  const data = getData();
+  data.forEach((s,i)=>{
+    const div = document.createElement('div');
+    div.className = 'season-item' + (i===currentIndex?' active':'');
+    div.innerHTML = `<div class="dot"></div><div class="name">${s.icon}${s.name}</div><div class="date-label">${s.date}</div>`;
+    div.onclick = ()=>{currentIndex=i; renderAll();};
+    tl.appendChild(div);
+  });
+  // Scroll active into view
+  const active = tl.querySelector('.active');
+  if(active) setTimeout(()=>active.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}),50);
+}
+
+function renderNav(){
+  const data = getData();
+  const s = data[currentIndex];
+  document.getElementById('navTitle').textContent = `${s.icon} ${s.name}`;
+  document.getElementById('navSub').textContent = s.date;
+}
+
+function renderQuadrants(){
+  const q = document.getElementById('quadrants');
+  const s = getSeason(currentIndex);
+  const items = [
+    {key:'yi', label:'衣', icon:'👗', cls:'q-yi'},
+    {key:'shi', label:'食', icon:'🍜', cls:'q-shi'},
+    {key:'zhu', label:'住', icon:'🏠', cls:'q-zhu'},
+    {key:'xing', label:'行', icon:'🚗', cls:'q-xing'}
+  ];
+  q.innerHTML = items.map(it => `
+    <div class="q-card ${it.cls}">
+      <span class="q-icon">${it.icon}</span>
+      <div class="q-title">${it.label}</div>
+      <div class="q-items">${s[it.key].map(t => `<span class="q-tag">${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+function renderAll(){
+  renderTimeline();
+  renderNav();
+  renderQuadrants();
+  scrollTo(0,0);
+}
+
+// ============ NAVIGATION ============
+document.getElementById('prevBtn').onclick = ()=>{
+  if(currentIndex > 0){currentIndex--;renderAll();}
+};
+document.getElementById('nextBtn').onclick = ()=>{
+  const data = getData();
+  if(currentIndex < data.length-1){currentIndex++;renderAll();}
+};
+// Touch swipe
+let touchStartX = 0;
+document.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX);
+document.addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].screenX - touchStartX;
+  if(Math.abs(diff) > 50){
+    if(diff < 0) document.getElementById('nextBtn').click();
+    else document.getElementById('prevBtn').click();
+  }
+});
+// Keyboard
+document.addEventListener('keydown', e => {
+  if(e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+  if(e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+});
+
+// ============ REGION ============
+document.querySelectorAll('.region-btn').forEach(btn => {
+  btn.onclick = ()=>{
+    document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRegion = btn.dataset.region;
+    const currentSeason = getCurrentSeasonIndex();
+    currentIndex = currentSeason;
+    renderAll();
+  };
+});
+
+// ============ DATE INDICATOR ============
+function updateDateIndicator(){
+  const now = new Date();
+  const s = getSeason(currentIndex);
+  document.getElementById('dateIndicator').innerHTML =
+    `📅 今日 · <span class="highlight">${s.icon} ${s.name}</span> · ${s.date}`;
+}
+
+// ============ INIT ============
+currentIndex = getCurrentSeasonIndex();
+renderAll();
+updateDateIndicator();
+
+// PWA register
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
